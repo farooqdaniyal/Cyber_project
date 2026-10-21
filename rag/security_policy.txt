@@ -1,0 +1,140 @@
+============================================================
+DOCUMENT: CYBER SECURITY INCIDENT RESPONSE PLAYBOOKS (AGENT-READY)
+Version: 3.0 (Autonomous Agent Execution Standards)
+============================================================
+
+------------------------------------------------------------
+PLAYBOOK 01: DoS Hulk / Application-Layer Exhaustion
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1499.002 (Endpoint Denial of Service: Service Exhaustion Flood)
+Attack Category: Application Layer DoS
+Target Vector: HTTP GET/POST Request Flooding
+
+[TECHNICAL INDICATORS & METRICS]
+- Request Frequency: > 500 requests/sec from single IP / Subnet
+- Header Entropy: High variation in User-Agent and Accept-Headers
+- Server Metric: CPU Utilization > 85%, Worker Thread Exhaustion > 90%
+
+[DECISION MATRIX FOR AGENTS]
+- IF ML_Confidence >= 0.90 AND Severity == HIGH -> TRIGGER AUTOMATED MITIGATION
+- IF ML_Confidence < 0.90 OR Severity == CRITICAL -> TRIGGER HUMAN ESCALATION (TIER 2)
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Containment): Execute Firewall Ban via API/IPtables.
+   Command Template: `iptables -A INPUT -s {source_ip} -j DROP`
+2. STEP_2 (Application Level): Update WAF Rate Limiting Policy.
+   Rule Config: Set rate limit to 50 req/min for IP `{source_ip}`.
+3. STEP_3 (Investigation): Fetch recent 100 HTTP headers for pattern log verification.
+4. STEP_4 (Reporting): Generate Incident Ticket with MITRE Mapping T1499.002.
+
+[HUMAN ESCALATION POLICY]
+If service failure persists > 3 minutes after IP block, escalate to Network Operations Center (NOC) and trigger CDN Scrubbing mode.
+
+[TRIGGER KEYWORDS FOR RAG]
+- "hulk", "http flood", "application layer dos", "high request volume", "T1499.002"
+
+------------------------------------------------------------
+PLAYBOOK 01b: DoS GoldenEye / Keep-Alive Exhaustion
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1499.002 (Endpoint Denial of Service: Service Exhaustion Flood)
+Attack Category: Application Layer DoS (Keep-Alive variant)
+Target Vector: HTTP GET/POST with randomized headers and persistent connections
+
+[TECHNICAL INDICATORS & METRICS]
+- Active Connections: High number of simultaneous keep-alive connections
+- Server Metric: Connection pool nearing maximum capacity
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Containment): Block offending source IPs at WAF/firewall level.
+2. STEP_2 (Server Config): Reduce server keep-alive timeout settings.
+3. STEP_3 (Rate Limiting): Enable connection rate limiting per IP address.
+4. STEP_4 (Reporting): Generate Incident Ticket with MITRE Mapping T1499.002.
+
+[TRIGGER KEYWORDS FOR RAG]
+- "goldeneye", "keep-alive exhaustion", "randomized headers", "connection pool", "T1499.002"
+
+------------------------------------------------------------
+PLAYBOOK 02: DDoS (Distributed Denial-of-Service)
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1498.002 (Network Denial of Service: Reflection Amplification)
+Attack Category: Volumetric Network Attack
+Target Vector: UDP/ICMP/SYN Flood across multiple nodes
+
+[TECHNICAL INDICATORS & METRICS]
+- Source IPs: > 500 unique IPs sending simultaneous traffic
+- Bandwidth Utilization: > 80% link capacity saturation
+- Packet Rate: > 100,000 PPS (Packets Per Second)
+
+[DECISION MATRIX FOR AGENTS]
+- Automated Response: Immediate CDN Scrubbing + ISP BGP Anycast Routing.
+- Manual Rule: Do NOT attempt individual IP bans (Botnet pools are dynamic).
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Scrubbing): Trigger Cloudflare/AWS Shield API to enable "I'm Under Attack" mode.
+2. STEP_2 (Traffic Shaping): Drop all non-essential UDP/ICMP traffic at the edge router.
+3. STEP_3 (Alerting): Send Urgent PagerDuty alert to SOC Lead and CISO.
+
+------------------------------------------------------------
+PLAYBOOK 03: DoS Slowloris / Slowhttptest
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1499 (Endpoint Denial of Service)
+Attack Category: Low-and-Slow Application Attack
+Target Vector: Incomplete HTTP Headers / Slow Data Transfer
+
+[TECHNICAL INDICATORS & METRICS]
+- Active Connections: > 200 persistent open sockets with incomplete headers
+- Traffic Volume: Low (< 1 Mbps), masking as normal legitimate traffic
+- Connection Duration: Sockets held open for > 60 seconds
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Server Config): Reduce HTTP Keep-Alive Timeout to 5 seconds.
+   Command/Config: `Set-Nginx-Timeout client_header_timeout 5s;`
+2. STEP_2 (Filter): Enable Reverse Proxy Protection (e.g., Apache mod_reqtimeout).
+3. STEP_3 (Block): Add source IP to dynamic threat intelligence blacklist.
+
+------------------------------------------------------------
+PLAYBOOK 04: Heartbleed Vulnerability Exploitation
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1190 (Exploit Public-Facing Application) | CVE-2014-0160
+Attack Category: Vulnerability Exploitation & Data Leakage
+Target Vector: Malformed OpenSSL TLS Heartbeat Request
+
+[DECISION MATRIX FOR AGENTS]
+- Severity: CRITICAL
+- Auto-Mitigation: Immediate Isolation of Affected Host.
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Isolation): Isolate affected web server from production subnets (`ifconfig eth0 down` or VPC Security Group isolation).
+2. STEP_2 (Patching Trigger): Check OpenSSL version. If 1.0.1 - 1.0.1f, trigger patch script (`apt-get install --only-upgrade openssl`).
+3. STEP_3 (Key Revocation): Flag SSL/TLS certificates for emergency revocation and re-issuance.
+4. STEP_4 (Forensics): Dump RAM state for post-incident analysis.
+
+------------------------------------------------------------
+PLAYBOOK 05: PortScan & Network Reconnaissance
+------------------------------------------------------------
+MITRE ATT&CK Mapping: T1046 (Network Service Discovery)
+Attack Category: Reconnaissance
+
+[TECHNICAL INDICATORS & METRICS]
+- TCP SYN / Connects across > 50 distinct ports within 10 seconds from single source IP.
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Tarpit): Route attacker IP to Honeypot / Tarpit to gather intelligence.
+2. STEP_2 (Block): Temporary 24-hour firewall ban on source IP.
+
+------------------------------------------------------------
+PLAYBOOK 06: BENIGN / Normal Traffic
+------------------------------------------------------------
+MITRE ATT&CK Mapping: Not applicable (no malicious activity detected)
+Attack Category: None
+Target Vector: None
+
+[DECISION MATRIX FOR AGENTS]
+- IF Classification == BENIGN -> NO ACTION REQUIRED, LOG ONLY
+
+[AUTOMATED AGENT ACTION PLAYBOOK]
+1. STEP_1 (Logging): Log traffic summary for routine audit purposes only.
+2. STEP_2 (Monitoring): Continue standard passive monitoring, no alert generated.
+
+[TRIGGER KEYWORDS FOR RAG]
+- "benign", "normal traffic", "no threat", "safe", "legitimate"
