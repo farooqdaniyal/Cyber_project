@@ -3,8 +3,4 @@ langgraph
 langchain
 langchain-core
 langchain-community
-langchain-google-genai
-langchain-groq
-langchain-chroma
-chromadb
 python-dotenv
