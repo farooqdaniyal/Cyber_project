@@ -7,3 +7,7 @@ langchain-huggingface
 huggingface-hub
 python-dotenv
 requests
+joblib
+scikit-learn
+pandas
+numpy
