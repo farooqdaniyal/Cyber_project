@@ -1,0 +1,29 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "runtime": "python",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "rag",
+          "format": "url",
+          "env": "RAG_SERVICE_URL"
+        }
+      ]
+    },
+    "rag": {
+      "root": "rag",
+      "runtime": "python"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
