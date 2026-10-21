@@ -1,7 +1,9 @@
 streamlit
+plotly
 langgraph
 langchain-core
 langchain-community
+langchain-huggingface
 huggingface-hub
 python-dotenv
 requests
