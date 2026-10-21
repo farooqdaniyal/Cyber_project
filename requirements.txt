@@ -2,4 +2,5 @@ streamlit
 langgraph
 langchain
 langchain-core
-langchain-openai  # (ya jo model aap use kar rahe hain)
+langchain-community
+python-dotenv
