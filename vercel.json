@@ -4,6 +4,7 @@
     "app": {
       "root": ".",
       "runtime": "python",
+      "entrypoint": "main.py",
       "bindings": [
         {
           "type": "service",
@@ -15,7 +16,8 @@
     },
     "rag": {
       "root": "rag",
-      "runtime": "python"
+      "runtime": "python",
+      "entrypoint": "langgraph_workflow.py"
     }
   },
   "rewrites": [
