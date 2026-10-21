@@ -7,18 +7,21 @@ joblib
 python-dotenv
 requests
 
-langgraph
 langchain
 langchain-core
 langchain-community
+langgraph
 langchain-groq
 langchain-chroma
 chromadb
 
 langchain-huggingface
 huggingface-hub
+sentence-transformers
 
-google-generativeai
 langchain-google-genai
+google-genai
 
-gtts
+tavily-python
+gTTS
+SpeechRecognition
