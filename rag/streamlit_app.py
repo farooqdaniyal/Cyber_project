@@ -5,6 +5,14 @@
 import os
 import sys
 import importlib
+
+# Streamlit Cloud ka purana sqlite3 chromadb ko rok deta hai. `pysqlite3-binary` install ho to wahi istemal karo
+# (install na ho to kuch nahi hota).
+try:
+    __import__("pysqlite3")
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except Exception:
+    pass
 from pathlib import Path
 
 import streamlit as st
@@ -40,6 +48,24 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ---------------- Secrets -> environment variables ----------------
+def _bridge_secrets():
+    """Streamlit Cloud ke Secrets ko os.environ mein daalo (ek [section] ke andar likhi keys bhi)."""
+    simple = (str, int, float, bool)
+    try:
+        for k, v in st.secrets.items():
+            if isinstance(v, simple):
+                os.environ.setdefault(str(k), str(v))
+            elif hasattr(v, "items"):
+                for k2, v2 in v.items():
+                    if isinstance(v2, simple):
+                        os.environ.setdefault(str(k2), str(v2))
+    except Exception:
+        pass                       # secrets file hi nahi (apna computer): .env se kaam chalta hai
+
+
+_bridge_secrets()
 
 # ---------------- Theme ----------------
 import theme
@@ -163,6 +189,15 @@ def _show_load_error(e):
         hint = ("Set GROQ_API_KEY in your app Secrets (Streamlit Cloud: Manage app > Settings > Secrets), "
                 "then reboot the app.")
     theme.page_header(page.replace("_", " "), LABELS.get(page, page))
+    if "KEY" in msg.upper() or "KEY" in hint.upper():
+        names = ["GROQ_API_KEY", "TAVILY_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY", "HF_TOKEN",
+                 "N8N_WEBHOOK_URL", "SIGNUP_CODE"]
+        try:
+            found = ", ".join(sorted(map(str, st.secrets.keys()))) or "none"
+        except Exception:
+            found = "no secrets found"
+        hint += ("\n\n**Key check (names only):** " + ", ".join(f"`{n}` {'OK' if os.getenv(n) else 'MISSING'}" for n in names)
+                 + f"\n\n**Secrets names found:** {found}")
     st.error("This page could not be loaded.\n\n`" + msg[:400] + "`" + (f"\n\n**Fix:** {hint}" if hint else ""))
     st.stop()
 
