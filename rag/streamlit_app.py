@@ -150,6 +150,23 @@ with st.sidebar:
 
 # ---------------- Router ----------------
 module_name = f"pages_ui.{page}"
+
+
+def _show_load_error(e):
+    """Page load na ho to Streamlit ka 'redacted' error nahi, balkay saaf wajah aur hal dikhao."""
+    msg = f"{type(e).__name__}: {e}"
+    low = msg.lower()
+    hint = ""
+    if isinstance(e, ModuleNotFoundError) and getattr(e, "name", None):
+        hint = f"The package '{e.name}' is missing. Add it to requirements.txt and redeploy."
+    elif "groq" in low or "api_key" in low or "api key" in low:
+        hint = ("Set GROQ_API_KEY in your app Secrets (Streamlit Cloud: Manage app > Settings > Secrets), "
+                "then reboot the app.")
+    theme.page_header(page.replace("_", " "), LABELS.get(page, page))
+    st.error("This page could not be loaded.\n\n`" + msg[:400] + "`" + (f"\n\n**Fix:** {hint}" if hint else ""))
+    st.stop()
+
+
 try:
     mod = importlib.import_module(module_name)
 except ModuleNotFoundError as e:
@@ -157,6 +174,8 @@ except ModuleNotFoundError as e:
         theme.page_header(page.replace("_", " "), LABELS.get(page, page))
         st.markdown('<div class="coming">This page is not available yet.</div>', unsafe_allow_html=True)
         st.stop()
-    raise
+    _show_load_error(e)
+except Exception as e:
+    _show_load_error(e)
 
 mod.render()
