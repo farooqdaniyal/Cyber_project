@@ -2,6 +2,8 @@ import html
 import json
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -19,6 +21,7 @@ LV_ORDER = {"Info": 0, "Low": 1, "Medium": 2, "High": 3, "Critical": 4}
 RANGES = {"Last 24 hours": pd.Timedelta(days=1), "Last 7 days": pd.Timedelta(days=7),
           "Last 30 days": pd.Timedelta(days=30), "All time": None}
 MUTE = "#8c9ac4"
+APP_TZ = ZoneInfo("Asia/Karachi")
 
 # ---- simple line icons (inline SVG) ----
 ICONS = {
@@ -405,7 +408,7 @@ def render():
     name = user.get("full_name", "Analyst")
     first = name.split()[0] if name.split() else "Analyst"
     initials = "".join(w[0] for w in name.split()[:2]).upper() or "A"
-    now = datetime.now()
+    now = datetime.now(APP_TZ).replace(tzinfo=None)
 
     raw = theme.load_audit()
     d = _prep(raw) if not raw.empty else None
