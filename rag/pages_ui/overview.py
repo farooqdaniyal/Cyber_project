@@ -255,7 +255,7 @@ def _telemetry_fig(w, rng):
     fig.update_layout(showlegend=False, margin=dict(l=28, r=8, t=4, b=22), hovermode="x unified",
                       hoverlabel=dict(bgcolor="#0a1230", bordercolor="#4f6df5", font=dict(color="#e8edff")),
                       font=dict(color=MUTE, size=10))
-      fig.update_xaxes(tickformat=fmt, title=None,
+    fig.update_xaxes(tickformat=fmt, title=None,
                      hoverformat="%d %b" if freq == "D" else "%d %b %H:%M",
                      gridcolor="rgba(120,140,220,.06)")
     if few:
