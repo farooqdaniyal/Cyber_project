@@ -224,28 +224,43 @@ def _telemetry_fig(w, rng):
     if c.empty:
         return None
     span = c["ts"].max() - c["ts"].min()
-    freq = "h" if (RANGES[rng] == pd.Timedelta(days=1) or span <= pd.Timedelta(days=2)) else "D"
+
+    # span ke hisab se bucket size
+    if span <= pd.Timedelta(minutes=30):
+        freq, fmt = "1min", "%H:%M"
+    elif span <= pd.Timedelta(hours=6):
+        freq, fmt = "10min", "%H:%M"
+    elif RANGES[rng] == pd.Timedelta(days=1) or span <= pd.Timedelta(days=2):
+        freq, fmt = "h", "%H:%M"
+    else:
+        freq, fmt = "D", "%d %b"
+
     c = c.assign(b=c["ts"].dt.floor(freq))
     pv = c.groupby(["b", "lvl"]).size().unstack(fill_value=0).reindex(columns=LEVELS[:4], fill_value=0)
     pv = pv.reindex(pd.date_range(pv.index.min(), pv.index.max(), freq=freq), fill_value=0)
-    fmt = "%d %b" if freq == "D" else "%H:%M"
+
+    # kam points hon to spline na lagayen
+    few = len(pv) < 4
     fig = go.Figure()
     for lv in ["Low", "Medium", "High", "Critical"]:
         col = LV_COLOR[lv]
         fig.add_trace(go.Scatter(
             x=pv.index, y=pv[lv], name=lv, mode="lines+markers",
-            line=dict(color=col, width=2.2, shape="spline", smoothing=0.7),
-            marker=dict(size=5, color=col), fill="tozeroy", fillcolor=col + "18",
+            line=dict(color=col, width=2.2, shape="linear" if few else "spline", smoothing=0.7),
+            marker=dict(size=9 if few else 5, color=col),
+            fill="tozeroy", fillcolor=col + "18",
             hovertemplate="%{y}<extra>" + lv + "</extra>"))
+
     theme.plotly_layout(fig, 215)
     fig.update_layout(showlegend=False, margin=dict(l=28, r=8, t=4, b=22), hovermode="x unified",
                       hoverlabel=dict(bgcolor="#0a1230", bordercolor="#4f6df5", font=dict(color="#e8edff")),
                       font=dict(color=MUTE, size=10))
-    fig.update_xaxes(tickformat=fmt, title=None, hoverformat="%d %b %H:%M" if freq == "h" else "%d %b",
+    fig.update_xaxes(tickformat=fmt, title=None,
+                     hoverformat="%d %b" if freq == "D" else "%d %b %H:%M",
                      gridcolor="rgba(120,140,220,.06)")
     fig.update_yaxes(rangemode="tozero", title=None, gridcolor="rgba(120,140,220,.12)")
     return fig
-
+          
 
 def _donut_fig(counts, total):
     labels = [k for k in LEVELS if counts.get(k, 0) > 0]
