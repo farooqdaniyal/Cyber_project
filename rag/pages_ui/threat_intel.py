@@ -7,31 +7,31 @@ import streamlit as st
 import theme
 from data_utils import load_audit
 
-# Aam (general) guidance. Aap apne RAG playbooks se iski jagah le sakte hain.
+# General guidance. You can replace this with your RAG playbooks.
 KNOWLEDGE = {
-    "DDOS": ("Bohat saari machines se ek saath traffic bhej kar service ko down karna.",
-             "Rate limiting, upstream scrubbing/CDN, attacker IP ranges block karna."),
-    "DOS HULK": ("HTTP flood: unique URLs bhej kar web server ko overload karna.",
-                 "WAF rules, request rate limits, server capacity check karna."),
-    "DOS GOLDENEYE": ("HTTP keep-alive/cache bypass se server resources khatam karna.",
-                      "Connection timeouts kam karein, WAF aur rate limiting lagayein."),
-    "DOS SLOWLORIS": ("Aadhe adhoore connections khule rakh kar server ke slots bhar dena.",
-                      "Header/body timeouts, per-IP connection limits, reverse proxy."),
-    "PORTSCAN": ("Khule ports aur services dhoondne ki koshish (reconnaissance).",
-                 "Source IP block/monitor karein, firewall se unused ports band karein."),
-    "BOT": ("Compromised machine jo C2 server ke hukm par chalti hai.",
-            "Machine isolate karein, C2 domains/IPs block karein, malware scan chalayein."),
-    "HEARTBLEED": ("OpenSSL ki khami jis se server memory (keys, passwords) leak ho sakti hai.",
-                   "OpenSSL patch karein, certificates aur keys badlein, sessions invalidate karein."),
-    "INFILTRATION": ("Network ke andar ghus kar aage phailne ki koshish.",
-                     "Affected host isolate karein, credentials reset karein, lateral movement check karein."),
-    "WEB ATTACK": ("SQL injection / XSS jaise web application hamlay.",
-                   "WAF rules, input validation, logs mein payloads check karein."),
-    "FTP-PATATOR": ("FTP par brute-force login attempts.",
-                    "Account lockout, MFA, source IP block karein."),
-    "SSH-PATATOR": ("SSH par brute-force login attempts.",
-                    "Key-based auth, fail2ban, source IP block karein."),
-    "BENIGN": ("Normal, bina khatre wala traffic.", "Koi action nahi, sirf logging."),
+    "DDOS": ("Sending traffic from many machines at once to take a service down.",
+             "Rate limiting, upstream scrubbing/CDN, and blocking attacker IP ranges."),
+    "DOS HULK": ("HTTP flood: sending unique URLs to overload the web server.",
+                 "WAF rules, request rate limits, and checking server capacity."),
+    "DOS GOLDENEYE": ("Exhausting server resources using HTTP keep-alive and cache bypass.",
+                      "Lower connection timeouts, and use a WAF and rate limiting."),
+    "DOS SLOWLORIS": ("Holding half-open connections to fill up the server's connection slots.",
+                      "Header/body timeouts, per-IP connection limits, and a reverse proxy."),
+    "PORTSCAN": ("Probing for open ports and services (reconnaissance).",
+                 "Block or monitor the source IP, and close unused ports on the firewall."),
+    "BOT": ("A compromised machine that obeys commands from a C2 server.",
+            "Isolate the machine, block C2 domains/IPs, and run a malware scan."),
+    "HEARTBLEED": ("An OpenSSL flaw that can leak server memory (keys, passwords).",
+                   "Patch OpenSSL, rotate certificates and keys, and invalidate sessions."),
+    "INFILTRATION": ("Getting inside the network and trying to spread further.",
+                     "Isolate the affected host, reset credentials, and check for lateral movement."),
+    "WEB ATTACK": ("Web application attacks such as SQL injection and XSS.",
+                   "WAF rules, input validation, and checking logs for payloads."),
+    "FTP-PATATOR": ("Brute-force login attempts against FTP.",
+                    "Account lockout, MFA, and blocking the source IP."),
+    "SSH-PATATOR": ("Brute-force login attempts against SSH.",
+                    "Key-based authentication, fail2ban, and blocking the source IP."),
+    "BENIGN": ("Normal, harmless traffic.", "No action needed, logging only."),
 }
 
 
@@ -85,16 +85,16 @@ def render():
     else:
         st.caption("No audit data yet, but you can browse the knowledge base below.")
 
-    theme.section("Attack knowledge base", "Har attack kya hai aur kya karna chahiye")
+    theme.section("Attack knowledge base", "What each attack is and what to do about it")
     seen = []
     if not d.empty and "prediction" in d.columns:
         seen = [str(x) for x in d["prediction"].dropna().unique()]
     names = sorted(set(seen) | {k.title() for k in KNOWLEDGE})
-    choice = st.selectbox("Attack chunein", names)
-    desc, action = KNOWLEDGE.get(choice.upper(), ("Is attack ke liye abhi description nahi hai.",
-                                                    "RAG playbook / analyst se rabta karein."))
+    choice = st.selectbox("Select an attack", names)
+    desc, action = KNOWLEDGE.get(choice.upper(), ("No description is available for this attack yet.",
+                                                    "Check the RAG playbook or contact an analyst."))
     a, b = st.columns(2)
-    a.markdown(f'<div class="panel"><h3>📖 Yeh kya hai</h3><div class="panel-body">{desc}</div></div>',
+    a.markdown(f'<div class="panel"><h3>📖 What it is</h3><div class="panel-body">{desc}</div></div>',
                unsafe_allow_html=True)
     b.markdown(f'<div class="panel"><h3>🛠️ Recommended response</h3><div class="panel-body">{action}</div></div>',
                unsafe_allow_html=True)
