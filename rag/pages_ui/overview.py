@@ -219,51 +219,58 @@ def _kpi_cards(items):
     return f'<div class="kp-grid">{cards}</div>'
 
 
-def _telemetry_fig(w, rng):
+def _telemetry_fig(w, rng, anchor):
     c = w.dropna(subset=["ts"])
     if c.empty:
         return None
-    span = c["ts"].max() - c["ts"].min()
 
-    # span ke hisab se bucket size
+    # x-axis hamesha SELECTED range ka hota hai (sirf data ka nahi)
+    delta = RANGES[rng]
+    start = (anchor - delta) if delta is not None else c["ts"].min()
+    span = anchor - start
     if span <= pd.Timedelta(minutes=30):
         freq, fmt = "1min", "%H:%M"
+        start = anchor - pd.Timedelta(minutes=30)       # thodi jagah do
     elif span <= pd.Timedelta(hours=6):
         freq, fmt = "10min", "%H:%M"
-    elif RANGES[rng] == pd.Timedelta(days=1) or span <= pd.Timedelta(days=2):
+    elif span <= pd.Timedelta(days=2):
         freq, fmt = "h", "%H:%M"
     else:
         freq, fmt = "D", "%d %b"
 
     c = c.assign(b=c["ts"].dt.floor(freq))
     pv = c.groupby(["b", "lvl"]).size().unstack(fill_value=0).reindex(columns=LEVELS[:4], fill_value=0)
-    pv = pv.reindex(pd.date_range(pv.index.min(), pv.index.max(), freq=freq), fill_value=0)
+    full = pd.date_range(start.floor(freq), anchor.floor(freq), freq=freq)
+    if len(full) < 2:
+        full = pd.date_range(end=anchor.floor(freq), periods=2, freq=freq)
+    pv = pv.reindex(full, fill_value=0)
 
-    # kam points hon to spline na lagayen
-    few = len(pv) < 4
+    # kam active buckets hon to bars (dots se behtar), warna smooth lines
+    sparse = int((pv.sum(axis=1) > 0).sum()) < 4
     fig = go.Figure()
     for lv in ["Low", "Medium", "High", "Critical"]:
         col = LV_COLOR[lv]
-        fig.add_trace(go.Scatter(
-            x=pv.index, y=pv[lv], name=lv, mode="lines+markers",
-            line=dict(color=col, width=2.2, shape="linear" if few else "spline", smoothing=0.7),
-            marker=dict(size=9 if few else 5, color=col),
-            fill="tozeroy", fillcolor=col + "18",
-            hovertemplate="%{y}<extra>" + lv + "</extra>"))
+        if sparse:
+            fig.add_trace(go.Bar(x=pv.index, y=pv[lv], name=lv, marker_color=col,
+                                 hovertemplate="%{y}<extra>" + lv + "</extra>"))
+        else:
+            fig.add_trace(go.Scatter(
+                x=pv.index, y=pv[lv], name=lv, mode="lines+markers",
+                line=dict(color=col, width=2.2, shape="spline", smoothing=0.7),
+                marker=dict(size=5, color=col), fill="tozeroy", fillcolor=col + "18",
+                hovertemplate="%{y}<extra>" + lv + "</extra>"))
 
     theme.plotly_layout(fig, 215)
     fig.update_layout(showlegend=False, margin=dict(l=28, r=8, t=4, b=22), hovermode="x unified",
+                      barmode="stack", bargap=0.35,
                       hoverlabel=dict(bgcolor="#0a1230", bordercolor="#4f6df5", font=dict(color="#e8edff")),
                       font=dict(color=MUTE, size=10))
-    fig.update_xaxes(tickformat=fmt, title=None,
+    fig.update_xaxes(tickformat=fmt, title=None, range=[full[0], full[-1]],
                      hoverformat="%d %b" if freq == "D" else "%d %b %H:%M",
                      gridcolor="rgba(120,140,220,.06)")
-    if few:
-        fig.update_xaxes(tickvals=list(pv.index))  # sirf asli buckets par labels
     fig.update_yaxes(rangemode="tozero", title=None, gridcolor="rgba(120,140,220,.12)")
     return fig
           
-
 def _donut_fig(counts, total):
     labels = [k for k in LEVELS if counts.get(k, 0) > 0]
     fig = go.Figure(go.Pie(
