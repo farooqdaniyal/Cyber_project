@@ -250,15 +250,21 @@ def _telemetry_fig(w, rng, anchor):
         full = pd.date_range(end=anchor.floor(freq), periods=2, freq=freq)
     pv = pv.reindex(full, fill_value=0)
 
+    # lines + halka fill (smooth). Bahut kam points hon to spline ki jagah seedhi line
+    few = len(pv) < 4
     fig = go.Figure()
     for lv in ["Low", "Medium", "High", "Critical"]:
-        fig.add_trace(go.Bar(x=pv.index, y=pv[lv], name=lv, marker_color=LV_COLOR[lv],
-                             hovertemplate="%{y}<extra>" + lv + "</extra>"))
+        col = LV_COLOR[lv]
+        fig.add_trace(go.Scatter(
+            x=pv.index, y=pv[lv], name=lv, mode="lines+markers",
+            line=dict(color=col, width=2.2, shape="linear" if few else "spline", smoothing=0.7),
+            marker=dict(size=8 if few else 5, color=col),
+            fill="tozeroy", fillcolor=col + "18",
+            hovertemplate="%{y}<extra>" + lv + "</extra>"))
 
     step = full[1] - full[0]
     theme.plotly_layout(fig, 215)
     fig.update_layout(showlegend=False, margin=dict(l=28, r=8, t=4, b=22), hovermode="x unified",
-                      barmode="stack", bargap=0.35,
                       hoverlabel=dict(bgcolor="#0a1230", bordercolor="#4f6df5", font=dict(color="#e8edff")),
                       font=dict(color=MUTE, size=10))
     fig.update_xaxes(tickformat=fmt, title=None,
