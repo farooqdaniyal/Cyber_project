@@ -220,57 +220,55 @@ def _kpi_cards(items):
 
 
 def _telemetry_fig(w, rng, anchor):
+    """Hamesha bars (stacked) dikhata hai: kam data ho ya zyada, chart saaf rehta hai.
+    X-axis selected range ka hota hai aur dono taraf thodi jagah chhodi jati hai."""
     c = w.dropna(subset=["ts"])
     if c.empty:
         return None
 
-    # x-axis hamesha SELECTED range ka hota hai (sirf data ka nahi)
     delta = RANGES[rng]
     start = (anchor - delta) if delta is not None else c["ts"].min()
     span = anchor - start
+
+    # span ke hisab se bucket size
     if span <= pd.Timedelta(minutes=30):
         freq, fmt = "1min", "%H:%M"
-        start = anchor - pd.Timedelta(minutes=30)       # thodi jagah do
+        start = anchor - pd.Timedelta(minutes=30)
     elif span <= pd.Timedelta(hours=6):
         freq, fmt = "10min", "%H:%M"
     elif span <= pd.Timedelta(days=2):
         freq, fmt = "h", "%H:%M"
-    else:
+    elif span <= pd.Timedelta(days=120):
         freq, fmt = "D", "%d %b"
+    else:
+        freq, fmt = "7D", "%d %b"          # bahut lamba data ho to hafta-war buckets
 
     c = c.assign(b=c["ts"].dt.floor(freq))
     pv = c.groupby(["b", "lvl"]).size().unstack(fill_value=0).reindex(columns=LEVELS[:4], fill_value=0)
-    full = pd.date_range(start.floor(freq), anchor.floor(freq), freq=freq)
+    full = pd.date_range(min(start.floor(freq), pv.index.min()), anchor.floor(freq), freq=freq)
     if len(full) < 2:
         full = pd.date_range(end=anchor.floor(freq), periods=2, freq=freq)
     pv = pv.reindex(full, fill_value=0)
 
-    # kam active buckets hon to bars (dots se behtar), warna smooth lines
-    sparse = int((pv.sum(axis=1) > 0).sum()) < 4
     fig = go.Figure()
     for lv in ["Low", "Medium", "High", "Critical"]:
-        col = LV_COLOR[lv]
-        if sparse:
-            fig.add_trace(go.Bar(x=pv.index, y=pv[lv], name=lv, marker_color=col,
-                                 hovertemplate="%{y}<extra>" + lv + "</extra>"))
-        else:
-            fig.add_trace(go.Scatter(
-                x=pv.index, y=pv[lv], name=lv, mode="lines+markers",
-                line=dict(color=col, width=2.2, shape="spline", smoothing=0.7),
-                marker=dict(size=5, color=col), fill="tozeroy", fillcolor=col + "18",
-                hovertemplate="%{y}<extra>" + lv + "</extra>"))
+        fig.add_trace(go.Bar(x=pv.index, y=pv[lv], name=lv, marker_color=LV_COLOR[lv],
+                             hovertemplate="%{y}<extra>" + lv + "</extra>"))
 
+    step = full[1] - full[0]
     theme.plotly_layout(fig, 215)
     fig.update_layout(showlegend=False, margin=dict(l=28, r=8, t=4, b=22), hovermode="x unified",
                       barmode="stack", bargap=0.35,
                       hoverlabel=dict(bgcolor="#0a1230", bordercolor="#4f6df5", font=dict(color="#e8edff")),
                       font=dict(color=MUTE, size=10))
-    fig.update_xaxes(tickformat=fmt, title=None, range=[full[0], full[-1]],
-                     hoverformat="%d %b" if freq == "D" else "%d %b %H:%M",
+    fig.update_xaxes(tickformat=fmt, title=None,
+                     range=[full[0] - step / 2, full[-1] + step / 2],
+                     hoverformat="%d %b" if freq in ("D", "7D") else "%d %b %H:%M",
                      gridcolor="rgba(120,140,220,.06)")
     fig.update_yaxes(rangemode="tozero", title=None, gridcolor="rgba(120,140,220,.12)")
     return fig
-          
+
+
 def _donut_fig(counts, total):
     labels = [k for k in LEVELS if counts.get(k, 0) > 0]
     fig = go.Figure(go.Pie(
@@ -527,7 +525,8 @@ def render():
             h2.markdown('<div class="lgd">' + "".join(
                 f'<span><i class="sdot" style="background:{LV_COLOR[k]}"></i>{k}</span>' for k in LEVELS[:4]) + '</div>',
                 unsafe_allow_html=True)
-            rng = h3.selectbox("Range", list(RANGES), index=1, label_visibility="collapsed", key="dash_range")
+            # default "All time": KPI cards aur graph ek hi data dikhayen
+            rng = h3.selectbox("Range", list(RANGES), index=3, label_visibility="collapsed", key="dash_range")
             w, start = _window(d, rng)
             fig = _telemetry_fig(w, rng, anchor)
             if fig is None:
@@ -567,4 +566,4 @@ def render():
         with st.container(border=True):
             st.markdown(_head("server", "Top Targeted Assets", "Most attacked systems in the selected range"),
                         unsafe_allow_html=True)
-            st.markdown(_asset_rows(w), unsafe_allow_html=True) 
+            st.markdown(_asset_rows(w), unsafe_allow_html=True)
