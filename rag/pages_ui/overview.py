@@ -529,7 +529,7 @@ def render():
                 unsafe_allow_html=True)
             rng = h3.selectbox("Range", list(RANGES), index=1, label_visibility="collapsed", key="dash_range")
             w, start = _window(d, rng)
-            fig = _telemetry_fig(w, rng)
+            fig = _telemetry_fig(w, rng, anchor)
             if fig is None:
                 st.caption("No events in this range.")
             else:
